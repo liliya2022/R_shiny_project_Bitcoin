@@ -1,0 +1,541 @@
+---
+title: "Elon_Musk_Tweets"
+output: html_document
+date: "2022-07-31"
+---
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lubridate)
+library(dygraphs)
+library(xts) 
+library(tidyquant)
+
+```
+
+```{r}
+#upload datasets
+tweets <-read.csv(file = '~/Desktop/R_project_Bitcoin/TweetsElonMusk.csv', stringsAsFactors = F)
+tweets_2021 <- read.csv(file = '~/Desktop/R_project_Bitcoin/2021.csv', stringsAsFactors = F)
+tweets_2022 <- read.csv(file = '~/Desktop/R_project_Bitcoin/2022.csv', stringsAsFactors = F)
+```
+"id", "date", "time", "username", 
+                 "tweet", "mentions", "urls", "photos", "replies_count", 
+                 "retweets_count", "likes_count", "hashtags", "link"
+                 
+
+
+
+```{r}
+tweets <- tweets %>%
+  filter(!grepl('2021', date))
+```
+
+
+```{r}
+#combine datasets
+total_tweets <- rbind(tweets, tweets_2021, tweets_2022)
+head(total_tweets)
+```
+
+
+
+
+
+```{r}
+#select columns
+total_tweets <- total_tweets %>%
+  select(c("id", "date", "time", "username", 
+                 "tweet", "mentions", "urls", "photos", "replies_count", 
+                 "retweets_count", "likes_count", "hashtags", "link"))
+
+
+```
+
+```{r}
+summary(total_tweets)
+```
+
+
+
+
+```{r}
+#check for missing values
+sum(is.na(total_tweets))
+```
+
+```{r}
+#format Date column
+total_tweets$date <- ymd(total_tweets$date)
+summary(total_tweets)
+```
+
+
+```{r}
+#add year column
+total_tweets$year <- as.numeric(format(total_tweets$date, "%Y"))
+```
+
+
+```{r}
+#add tweet frequency column
+tweet_freq <- rep(1, 15897)
+total_tweets <- data.frame(total_tweets, tweet_freq)
+
+```
+
+```{r}
+#growing popularity of tweets over the years
+freq_per_year <- total_tweets %>%
+  group_by(year) %>%
+  filter(year!= "2022") %>%
+  summarize(frequency = sum(tweet_freq))
+freq_per_year
+
+```
+
+```{r}
+#write.csv(freq_per_year,"~/Desktop/Bootcamp/R project/freq_per_year.csv", row.names = TRUE)
+```
+
+
+
+```{r}
+#graph tweet counts
+ggplot(freq_per_year, aes(x = year, y = frequency,  color = frequency)) + theme(plot.title = element_text(face="bold", hjust = 0.5), axis.title = element_text(face="bold"))+
+    geom_line()+ggtitle("Tweet Count 2010 - 2021") 
+```
+
+
+
+```{r}
+replies_count <- total_tweets %>%
+  group_by(year) %>%
+  filter(year!= "2022") %>%
+  summarize(Freq_of_replies = sum(replies_count))
+replies_count
+```
+
+```{r}
+#write.csv(replies_count,"~/Desktop/Bootcamp/R project/replies_count.csv", row.names = TRUE)
+```
+
+
+```{r}
+#graph replies counts
+p<-ggplot(replies_count, aes(x=year, y=Freq_of_replies, fill=Freq_of_replies)) +
+  geom_bar(stat="identity")+theme(plot.title = element_text(face="bold", hjust = 0.5), axis.title = element_text(face="bold")) +         scale_y_continuous(name="Frequencies of replies")+ ggtitle("Replies Per Year")
+p
+
+```
+```{r}
+retweet_count <- total_tweets %>%
+  group_by(year) %>%
+  filter(year!= "2022") %>%
+  summarize(Freq_of_retweets = sum(retweets_count))
+retweet_count
+```
+
+
+
+```{r}
+#write.csv(retweet_count,"~/Desktop/Bootcamp/R project/retweet_count.csv", row.names = TRUE)
+```
+
+
+
+```{r}
+#graph retweet counts
+p<-ggplot(retweet_count, aes(x=year, y=Freq_of_retweets, fill=Freq_of_retweets)) +
+  geom_bar(stat="identity")+theme(plot.title = element_text(face="bold", hjust = 0.5), axis.title = element_text(face="bold")) + scale_y_continuous(name="Frequencies of retweets") + ggtitle("Retweets Per Year")
+p 
+```
+
+```{r}
+likes_count <- total_tweets %>%
+  group_by(year) %>%
+  filter(year!= "2022") %>%
+  summarize(Freq_of_likes = sum(likes_count))
+likes_count
+```
+```{r}
+#write.csv(likes_count,"~/Desktop/Bootcamp/R project/likes_count.csv", row.names = TRUE)
+```
+
+
+
+```{r}
+#graph likes counts
+p<-ggplot(likes_count, aes(x=year, y=Freq_of_likes/1000000, fill=Freq_of_likes)) +
+  geom_bar(stat="identity")+theme(plot.title = element_text(face="bold", hjust = 0.5), axis.title = element_text(face="bold")) + scale_y_continuous(name="Frequencies of likes") + ggtitle("Likes Per Year")
+p 
+```
+
+```{r}
+
+#filter bitcoin tweets
+bitcoin_tweets <- total_tweets %>%
+  filter(grepl("bitcoin|Bitcoin|crypto|Crypto", tweet)) %>%
+  select(date, tweet)
+
+  
+bitcoin_tweets <- bitcoin_tweets %>%
+  rename(Date = date)
+```
+
+
+```{r}
+head(bitcoin_tweets)
+```
+
+
+```{r}
+#upload bitcoin dataset
+bitcoin <-read.csv(file = '~/Desktop/R_project_bitcoin/BTC-USD.csv', stringsAsFactors = F)
+bitcoin$Date <- ymd(bitcoin$Date)
+head(bitcoin)
+```
+```{r}
+close_price <- xts(x = bitcoin$Close, order.by = bitcoin$Date)
+```
+
+
+```{r}
+# visualization of bitcoin prices from 2014 to 2022
+p <- dygraph(close_price, main = "Bitcoin closing prices 2014-2022") %>%
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.1, drawGrid = FALSE, colors="#D8AE5A") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+  dyRoller(rollPeriod = 1)
+p 
+
+```
+
+
+
+
+
+```{r}
+#merge bitcoin and tweets in one dataset
+bitcoin_tweets <- merge(bitcoin, bitcoin_tweets, by = "Date")
+bitcoin_tweets <- bitcoin_tweets[, c(1,2,3,4,5, 7, 8)]
+head(bitcoin_tweets)
+```
+
+```{r}
+#write.csv(bitcoin_tweets,"~/Desktop/Bootcamp/R project/bitcoin_tweets.csv", row.names = TRUE)
+```
+
+
+
+
+```{r}
+## graphing data points from 2 different datasets on one graph
+ggplot() +
+  geom_point(data = bitcoin, aes(x = Date, y = Close), color = "blue") +   # must include argument label "data"
+  geom_point(data = bitcoin_tweets, aes(x = Date, y = Close))
+```
+
+
+
+
+
+
+```{r}
+
+## graphing data points from 2 different datasets on one graph
+
+close_price <- xts(x = bitcoin$Close, order.by = bitcoin$Date)
+tweet_price <- xts(x = bitcoin_tweets$Close, order.by = bitcoin_tweets$Date)
+prices <- cbind(close_price, tweet_price)
+
+
+dygraph(prices) %>%
+  dySeries("close_price", label = "Bitcoin price") %>%
+  dySeries("tweet_price", label = "Elon Musk tweet") %>%
+   dyRangeSelector()
+```
+
+
+
+
+
+
+
+```{r}
+bitcoin_new <- bitcoin[bitcoin$Date > "2018-01-01" &    # Extract data frame subset
+                   bitcoin$Date < "2022-03-01", ]
+bitcoin_new <- bitcoin_new[, c(1,2,3,4,5, 7)]
+head(bitcoin_new)                                      # Print new data frame
+```
+
+
+
+```{r}
+#10 day moving average
+
+bitcoin_move_aver <-
+  bitcoin_new %>%
+  # Calculate 10-day simple moving average
+  tq_mutate(select = Close, mutate_fun = SMA, n = 10) %>%
+  # Rename 10-day SMA to SMA.short
+  rename(SMA.10Days = SMA)
+
+head(bitcoin_move_aver)
+```
+
+
+```{r}
+# Transform to long form to wide form for graphing
+bitcoin_move_aver_10 <-
+  bitcoin_move_aver %>%
+  select(Date, Close, SMA.10Days) %>%
+  # Transform to long form 
+  gather(key = "type", value = "price", Close:SMA.10Days)
+
+```
+
+```{r}
+# Visualize 10 day average 
+bitcoin_move_aver_10 %>%
+  ggplot(aes(x = Date, y = price, col = type)) +
+  geom_line() + 
+  theme(legend.position="bottom") +
+  labs(title = "Simple Moving Averages ",
+       x = NULL,
+       y = "Bitcoin Prices")
+```
+
+```{r}
+library("tm")
+library("SnowballC")
+library("wordcloud")
+library("RColorBrewer")
+
+corpus <- iconv(bitcoin_tweets$tweet)
+corpus <- Corpus(VectorSource(corpus))
+inspect(corpus[1:5])
+```
+
+
+
+```{r}
+#clean text
+corpus <- tm_map(corpus, tolower)
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeNumbers)
+inspect(corpus[1:5])
+```
+
+
+
+
+```{r}
+cleanset <- tm_map(corpus, removeWords, stopwords('english'))
+removeURL <- function(x) gsub('http[[:alnum:]]*', '', x)
+remove_char <- function(x) gsub(	'’s','', x)
+
+cleanset <- tm_map(cleanset, content_transformer(removeURL))
+cleanset <- tm_map(cleanset, content_transformer(remove_char))
+
+inspect(cleanset[1:5])
+```
+
+
+
+
+
+
+```{r}
+
+cleanset <- tm_map(cleanset, removeWords, 'bitcoin')
+
+cleanset <- tm_map(cleanset, gsub,
+                   pattern = 'crypto',
+                   replacement = 'crypto')
+
+
+cleanset <- tm_map(cleanset, stemDocument)
+cleanset <- tm_map(cleanset, stripWhitespace)
+
+
+
+inspect(cleanset[1:5])
+
+```
+
+
+
+
+```{r}
+tdm <- TermDocumentMatrix(cleanset)
+m <- as.matrix(tdm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+```
+
+
+
+
+```{r}
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+```
+
+```{r}
+findFreqTerms(tdm, lowfreq = 4)
+```
+
+```{r}
+findAssocs(tdm, terms = "crypto", corlimit = 0.3)
+```
+
+```{r}
+head(d, 10)
+```
+```{r}
+barplot(d[1:10,]$freq, las = 2, names.arg = d[1:10,]$word,
+        col ="lightblue", main ="Most frequent words",
+        ylab = "Word frequencies")
+```
+
+
+```{r}
+#Sentiment analysis
+library(syuzhet)
+library(scales)
+library(reshape2)
+
+```
+
+```{r}
+tweets <- iconv(bitcoin_tweets$tweet)
+# get sentiment scores
+s <- get_nrc_sentiment(tweets)
+head(s)
+
+```
+
+
+
+```{r}
+barplot(colSums(s),
+        las = 2,
+        col = rainbow(10),
+        ylab = 'Count',
+        main = 'Sentiment Scores Tweets')
+```
+
+
+
+
+
+
+
+```{r}
+install.packages("ndjson")
+library(ndjson)
+library("sentimentr")
+library(tidyverse)
+```
+```{r}
+sentiment=sentiment_by(bitcoin_tweets$tweet)
+sentiment
+```
+
+```{r}
+summary(sentiment$ave_sentiment)
+```
+
+```{r}
+qplot(sentiment$ave_sentiment,   geom="histogram",binwidth=0.1,main="Review Sentiment Histogram") + xlab("Average Sentiment Score")
+```
+```{r}
+bitcoin_tweets$ave_sentiment=sentiment$ave_sentiment
+bitcoin_tweets$sd_sentiment=sentiment$sd
+```
+
+```{r}
+bitcoin_tweets <- bitcoin_tweets %>%
+  group_by(Date) %>%
+  mutate(avg_sentiment = mean(ave_sentiment))
+```
+
+
+```{r}
+#separate sentiment scores 
+bitcoin_tweets <- bitcoin_tweets %>% 
+  mutate(sentiment_score = if_else(avg_sentiment > 0, 'positive', if_else(avg_sentiment < 0, 'negative', 'neutral')))
+
+bitcoin_tweets_positive <- bitcoin_tweets %>%
+  filter(sentiment_score == "positive")
+
+bitcoin_tweets_negative <- bitcoin_tweets %>%
+  filter(sentiment_score == "negative")
+
+bitcoin_tweets_neutral <- bitcoin_tweets %>%
+  filter(sentiment_score == "neutral")
+
+
+```
+
+
+```{r}
+#write.csv(bitcoin_tweets_positive,"~/Desktop/Bootcamp/R project/bitcoin_tweets_positive.csv", row.names = TRUE)
+#write.csv(bitcoin_tweets_negative,"~/Desktop/Bootcamp/R project/bitcoin_tweets_negative.csv", row.names = TRUE)
+#write.csv(bitcoin_tweets_neutral,"~/Desktop/Bootcamp/R project/bitcoin_tweets_neutral.csv", row.names = TRUE)
+```
+
+
+```{r}
+bitcoin_tweets_positive %>%
+  select(Date, tweet)
+```
+
+
+
+```{r}
+bitcoin_tweets_negative %>%
+  select(Date, tweet)
+```
+```{r}
+bitcoin_tweets_neutral %>%
+  select(Date, tweet)
+```
+
+
+
+
+```{r}
+
+## graphing data points from 4 different datasets on one graph
+
+close_price <- xts(x = bitcoin$Close, order.by = bitcoin$Date)
+positive_tweet <- xts(x = bitcoin_tweets_positive$Close, order.by = bitcoin_tweets_positive$Date)
+negative_tweet <- xts(x = bitcoin_tweets_negative$Close, order.by = bitcoin_tweets_negative$Date)
+neutral_tweet <- xts(x = bitcoin_tweets_neutral$Close, order.by = bitcoin_tweets_neutral$Date)
+joined_graph <- cbind(close_price, positive_tweet, negative_tweet, neutral_tweet)
+
+
+dygraph(joined_graph) %>%
+  dySeries("close_price", label = "Bitcoin price") %>%
+  dySeries("positive_tweet", label = "Positive tweets", drawPoints = TRUE, pointSize = 3, color = "green") %>%
+  dySeries("negative_tweet", label = "Negative tweets", drawPoints = TRUE, pointSize = 3, color = "red") %>%
+  dySeries("neutral_tweet", label = "Neutral tweets", drawPoints = TRUE, pointSize = 3, color = "blue") %>%
+   dyRangeSelector()
+```
+
+
+```{r}
+bitcoin_tweets %>%
+  filter(Date == '2021-05-07')
+```
+
+
+
