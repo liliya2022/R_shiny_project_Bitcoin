@@ -18,27 +18,27 @@ library(tidyverse)
 library(ggplot2)
 library(gridExtra)
 
-
-
-bitcoin <-read.csv(file = '~/Desktop/R_project_Bitcoin/BTC-USD.csv', stringsAsFactors = F)
+bitcoin <-read.csv(file = 'BTC-USD.csv', stringsAsFactors = F)
 bitcoin$Date <- ymd(bitcoin$Date)
 
 
-freq_per_year <-read.csv(file = '~/Desktop/R_project_Bitcoin/freq_per_year.csv', stringsAsFactors = F)
-replies_count <-read.csv(file = '~/Desktop/R_project_Bitcoin/replies_count.csv', stringsAsFactors = F)
-retweet_count <-read.csv(file = '~/Desktop/R_project_Bitcoin/retweet_count.csv', stringsAsFactors = F)
-likes_count <-read.csv(file = '~/Desktop/R_project_Bitcoin/likes_count.csv', stringsAsFactors = F)
+freq_per_year <-read.csv(file = 'freq_per_year.csv', stringsAsFactors = F)
+replies_count <-read.csv(file = 'replies_count.csv', stringsAsFactors = F)
+retweet_count <-read.csv(file = 'retweet_count.csv', stringsAsFactors = F)
+likes_count <-read.csv(file = 'likes_count.csv', stringsAsFactors = F)
 
 
-bitcoin_tweets_positive <-read.csv(file = '~/Desktop/R_project_Bitcoin/bitcoin_tweets_positive.csv', stringsAsFactors = F)
+bitcoin_tweets_positive <-read.csv(file = 'bitcoin_tweets_positive.csv', stringsAsFactors = F)
 bitcoin_tweets_positive$Date <- ymd(bitcoin_tweets_positive$Date)
 
 
-bitcoin_tweets_negative <-read.csv(file = '~/Desktop/R_project_Bitcoin/bitcoin_tweets_negative.csv', stringsAsFactors = F)
+bitcoin_tweets_negative <-read.csv(file = 'bitcoin_tweets_negative.csv', stringsAsFactors = F)
 bitcoin_tweets_negative$Date <- ymd(bitcoin_tweets_negative$Date)
 
-bitcoin_tweets_neutral<-read.csv(file = '~/Desktop/R_project_Bitcoin/bitcoin_tweets_neutral.csv', stringsAsFactors = F)
+bitcoin_tweets_neutral<-read.csv(file = 'bitcoin_tweets_neutral.csv', stringsAsFactors = F)
 bitcoin_tweets_neutral$Date <- ymd(bitcoin_tweets_neutral$Date)
+
+
 
 
 # Define UI for application that draws a histogram
